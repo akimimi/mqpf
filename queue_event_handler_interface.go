@@ -58,11 +58,11 @@ func (d *DefaultEventHandler) BeforeLaunch(qf QueueFramework) {
 	logs.Info("Queue Launched")
 }
 
-func (d *DefaultEventHandler) AfterLaunch(qf QueueFramework) {
+func (d *DefaultEventHandler) AfterLaunch(_ QueueFramework) {
 	logs.Info("Queue Stopped")
 }
 
-func (d *DefaultEventHandler) OnWaitingMessage(qf QueueFramework) {
+func (d *DefaultEventHandler) OnWaitingMessage(_ QueueFramework) {
 }
 
 func (d *DefaultEventHandler) ParseMessageBody(resp *ali_mns.MessageReceiveResponse) ([]byte, error) {
@@ -73,29 +73,29 @@ func (d *DefaultEventHandler) ParseMessageBody(resp *ali_mns.MessageReceiveRespo
 	}
 }
 
-func (d *DefaultEventHandler) OnParseMessageBodyFailed(err error, resp *ali_mns.MessageReceiveResponse) {
+func (d *DefaultEventHandler) OnParseMessageBodyFailed(_ error, _ *ali_mns.MessageReceiveResponse) {
 }
 
-func (d *DefaultEventHandler) ConsumeMessage(body []byte, resp *ali_mns.MessageReceiveResponse) error {
+func (d *DefaultEventHandler) ConsumeMessage(_ []byte, _ *ali_mns.MessageReceiveResponse) error {
 	return nil
 }
 
-func (d *DefaultEventHandler) OnConsumeFailed(err error, body []byte, resp *ali_mns.MessageReceiveResponse) {
+func (d *DefaultEventHandler) OnConsumeFailed(_ error, _ []byte, _ *ali_mns.MessageReceiveResponse) {
 }
 
-func (d *DefaultEventHandler) BeforeChangeVisibility(q *ali_mns.AliMNSQueue, resp *ali_mns.MessageReceiveResponse) {
+func (d *DefaultEventHandler) BeforeChangeVisibility(_ *ali_mns.AliMNSQueue, _ *ali_mns.MessageReceiveResponse) {
 }
-func (d *DefaultEventHandler) AfterChangeVisibility(q *ali_mns.AliMNSQueue,
-	resp *ali_mns.MessageReceiveResponse,
-	vr *ali_mns.MessageVisibilityChangeResponse) {
-}
-
-func (d *DefaultEventHandler) OnChangeVisibilityFailed(q *ali_mns.AliMNSQueue,
-	resp *ali_mns.MessageReceiveResponse,
-	vr *ali_mns.MessageVisibilityChangeResponse) {
+func (d *DefaultEventHandler) AfterChangeVisibility(_ *ali_mns.AliMNSQueue,
+	_ *ali_mns.MessageReceiveResponse,
+	_ *ali_mns.MessageVisibilityChangeResponse) {
 }
 
-func (d *DefaultEventHandler) OnError(err error, q *ali_mns.AliMNSQueue,
-	rr *ali_mns.MessageReceiveResponse,
-	vr *ali_mns.MessageVisibilityChangeResponse) {
+func (d *DefaultEventHandler) OnChangeVisibilityFailed(_ *ali_mns.AliMNSQueue,
+	_ *ali_mns.MessageReceiveResponse,
+	_ *ali_mns.MessageVisibilityChangeResponse) {
+}
+
+func (d *DefaultEventHandler) OnError(_ error, _ *ali_mns.AliMNSQueue,
+	_ *ali_mns.MessageReceiveResponse,
+	_ *ali_mns.MessageVisibilityChangeResponse) {
 }
