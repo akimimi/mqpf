@@ -11,23 +11,23 @@ import (
 
 type QueueFramework interface {
 	RegisterBreakQueueOsSingal(sigs ...os.Signal)
-    GetConfig() cl.QueueConfig
-    GetStatistic() Statistic
-    SetQueue(q ali_mns.AliMNSQueue)
-    HasValidQueue() bool
-    SetEventHandler(h QueueEventHandlerInterface)
+	GetConfig() cl.QueueConfig
+	GetStatistic() Statistic
+	SetQueue(q ali_mns.AliMNSQueue)
+	HasValidQueue() bool
+	SetEventHandler(h QueueEventHandlerInterface)
 	HasEventHandler() bool
 	Launch()
 	Stop()
 }
 
 type queueFramework struct {
-	queue ali_mns.AliMNSQueue
-	config cl.QueueConfig
-	handler QueueEventHandlerInterface
+	queue       ali_mns.AliMNSQueue
+	config      cl.QueueConfig
+	handler     QueueEventHandlerInterface
 	breakByUser bool
-	stat Statistic
-	perfLog performanceLog
+	stat        Statistic
+	perfLog     performanceLog
 }
 
 func NewQueueFramework(q ali_mns.AliMNSQueue, c cl.QueueConfig, h QueueEventHandlerInterface) *queueFramework {
@@ -46,7 +46,9 @@ func (qf *queueFramework) GetStatistic() Statistic {
 }
 
 func (qf *queueFramework) SetQueue(q ali_mns.AliMNSQueue) {
-	if q != nil { qf.queue = q }
+	if q != nil {
+		qf.queue = q
+	}
 }
 
 func (qf *queueFramework) HasValidQueue() bool {
@@ -54,7 +56,9 @@ func (qf *queueFramework) HasValidQueue() bool {
 }
 
 func (qf *queueFramework) SetEventHandler(h QueueEventHandlerInterface) {
-	if h != nil { qf.handler = h }
+	if h != nil {
+		qf.handler = h
+	}
 }
 
 func (qf *queueFramework) HasEventHandler() bool {
@@ -101,9 +105,6 @@ func (qf *queueFramework) OnMessageReceived(resp *ali_mns.MessageReceiveResponse
 	qf.changeVisibility(resp, func(vret *ali_mns.MessageVisibilityChangeResponse) {
 		bodyBytes, err := qf.handler.ParseMessageBody(resp)
 		if err == nil {
-			// if settings.verbose {
-			// 	logs.Debug(string(bodyBytes))
-			// }
 			err = qf.handler.ConsumeMessage(bodyBytes, resp)
 			if err == nil {
 				if err = qf.queue.DeleteMessage(vret.ReceiptHandle); err == nil {
@@ -122,7 +123,7 @@ func (qf *queueFramework) OnMessageReceived(resp *ali_mns.MessageReceiveResponse
 }
 
 func (qf *queueFramework) changeVisibility(resp *ali_mns.MessageReceiveResponse,
-									       onSuccess func(vret *ali_mns.MessageVisibilityChangeResponse)) {
+	onSuccess func(vret *ali_mns.MessageVisibilityChangeResponse)) {
 	qf.handler.BeforeChangeVisibility(&qf.queue, resp)
 	if vret, e := qf.queue.ChangeMessageVisibility(resp.ReceiptHandle, int64(qf.config.VisibilityTimeout)); e == nil {
 		qf.handler.AfterChangeVisibility(&qf.queue, resp, &vret)

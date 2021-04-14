@@ -35,4 +35,6 @@ OnChangeVisibilityFailed is invoked if the queue meets error in changing message
 OnError is invoked whenever an error happens in the flow. 
 User can log and process the error message.
 
+OnWaitingMessage is invoked when the queue framework starts to wait for one queue message.
+
 

@@ -15,6 +15,10 @@ type QueueEventHandlerInterface interface {
 	// qf QueueFramework is the framework
 	AfterLaunch(qf QueueFramework)
 
+	// OnWaitingMessage is invoked when queue framework starts to wait for one queue message.
+	// User can log queue status or do something besides normal dispose flow.
+	OnWaitingMessage(qf QueueFramework)
+
 	// ParseMessageBody decodes the message body and is invoked when message is received.
 	// The decoded message will be passed to ConsumeMessage interface as the first parameter.
 	ParseMessageBody(resp *ali_mns.MessageReceiveResponse) ([]byte, error)
@@ -43,10 +47,9 @@ type QueueEventHandlerInterface interface {
 	// OnError is invoked whenever an error happens.
 	OnError(err error, q *ali_mns.AliMNSQueue,
 		rr *ali_mns.MessageReceiveResponse, vr *ali_mns.MessageVisibilityChangeResponse)
-
 }
 
-type DefaultEventHandler struct {}
+type DefaultEventHandler struct{}
 
 func (d *DefaultEventHandler) BeforeLaunch(qf QueueFramework) {
 	if qf != nil {
@@ -57,6 +60,9 @@ func (d *DefaultEventHandler) BeforeLaunch(qf QueueFramework) {
 
 func (d *DefaultEventHandler) AfterLaunch(qf QueueFramework) {
 	logs.Info("Queue Stopped")
+}
+
+func (d *DefaultEventHandler) OnWaitingMessage(qf QueueFramework) {
 }
 
 func (d *DefaultEventHandler) ParseMessageBody(resp *ali_mns.MessageReceiveResponse) ([]byte, error) {
@@ -80,16 +86,16 @@ func (d *DefaultEventHandler) OnConsumeFailed(err error, body []byte, resp *ali_
 func (d *DefaultEventHandler) BeforeChangeVisibility(q *ali_mns.AliMNSQueue, resp *ali_mns.MessageReceiveResponse) {
 }
 func (d *DefaultEventHandler) AfterChangeVisibility(q *ali_mns.AliMNSQueue,
-											        resp *ali_mns.MessageReceiveResponse,
-										            vr *ali_mns.MessageVisibilityChangeResponse) {
+	resp *ali_mns.MessageReceiveResponse,
+	vr *ali_mns.MessageVisibilityChangeResponse) {
 }
 
 func (d *DefaultEventHandler) OnChangeVisibilityFailed(q *ali_mns.AliMNSQueue,
-												       resp *ali_mns.MessageReceiveResponse,
-	                                                   vr *ali_mns.MessageVisibilityChangeResponse) {
+	resp *ali_mns.MessageReceiveResponse,
+	vr *ali_mns.MessageVisibilityChangeResponse) {
 }
 
 func (d *DefaultEventHandler) OnError(err error, q *ali_mns.AliMNSQueue,
-	                                  rr *ali_mns.MessageReceiveResponse,
-	                                  vr *ali_mns.MessageVisibilityChangeResponse) {
+	rr *ali_mns.MessageReceiveResponse,
+	vr *ali_mns.MessageVisibilityChangeResponse) {
 }
