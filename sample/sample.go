@@ -41,20 +41,20 @@ func (e *EventHandler) BeforeLaunch(qf mqpf.QueueFramework) {
 	e.DefaultEventHandler.BeforeLaunch(qf)
 }
 
-func (e *EventHandler) AfterLaunch(qf mqpf.QueueFramework) {
+func (e *EventHandler) AfterLaunch(_ mqpf.QueueFramework) {
 	logs.Info("EventHandler after launch")
 }
 
-func (e *EventHandler) ConsumeMessage(body []byte, resp *ali_mns.MessageReceiveResponse) error {
+func (e *EventHandler) ConsumeMessage(body []byte, _ *ali_mns.MessageReceiveResponse) error {
 	logs.Info("Consume message: ", string(body))
 	return nil
 }
 
-func (e *EventHandler) OnError(err error, q *ali_mns.AliMNSQueue,
-	rr *ali_mns.MessageReceiveResponse, vr *ali_mns.MessageVisibilityChangeResponse) {
+func (e *EventHandler) OnError(err error, q ali_mns.AliMNSQueue,
+	rr *ali_mns.MessageReceiveResponse, vr *ali_mns.MessageVisibilityChangeResponse, qf mqpf.QueueFramework) {
 
 	if ali_mns.ERR_MNS_MESSAGE_NOT_EXIST.IsEqual(err) || q == nil || rr == nil || vr == nil {
 		return
 	}
-	logs.Info("On Error: ", err.Error())
+	e.DefaultEventHandler.OnError(err, q, rr, vr, qf)
 }

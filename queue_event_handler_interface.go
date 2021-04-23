@@ -2,6 +2,7 @@ package mqpf
 
 import (
 	"encoding/base64"
+	"fmt"
 	"github.com/aliyun/aliyun-mns-go-sdk"
 	"github.com/gogap/logs"
 )
@@ -34,19 +35,20 @@ type QueueEventHandlerInterface interface {
 	OnConsumeFailed(err error, body []byte, resp *ali_mns.MessageReceiveResponse)
 
 	// BeforeChangeVisibility is invoked before the queue framework changes message visibility.
-	BeforeChangeVisibility(q *ali_mns.AliMNSQueue, resp *ali_mns.MessageReceiveResponse)
+	BeforeChangeVisibility(q ali_mns.AliMNSQueue, resp *ali_mns.MessageReceiveResponse)
 
 	// AfterChangeVisibility is invoked after the queue framework changes message visibility.
-	AfterChangeVisibility(q *ali_mns.AliMNSQueue, resp *ali_mns.MessageReceiveResponse,
+	AfterChangeVisibility(q ali_mns.AliMNSQueue, resp *ali_mns.MessageReceiveResponse,
 		vr *ali_mns.MessageVisibilityChangeResponse)
 
 	// OnChangeVisibilityFailed is invoked if the queue framework can't change message visibility.
-	OnChangeVisibilityFailed(q *ali_mns.AliMNSQueue, resp *ali_mns.MessageReceiveResponse,
+	OnChangeVisibilityFailed(q ali_mns.AliMNSQueue, resp *ali_mns.MessageReceiveResponse,
 		vr *ali_mns.MessageVisibilityChangeResponse)
 
 	// OnError is invoked whenever an error happens.
-	OnError(err error, q *ali_mns.AliMNSQueue,
-		rr *ali_mns.MessageReceiveResponse, vr *ali_mns.MessageVisibilityChangeResponse)
+	OnError(err error, q ali_mns.AliMNSQueue,
+		rr *ali_mns.MessageReceiveResponse, vr *ali_mns.MessageVisibilityChangeResponse,
+		qf QueueFramework)
 }
 
 type DefaultEventHandler struct{}
@@ -55,14 +57,14 @@ func (d *DefaultEventHandler) BeforeLaunch(qf QueueFramework) {
 	if qf != nil {
 		qf.RegisterBreakQueueOsSingal()
 	}
-	logs.Info("Queue Launched")
 }
 
 func (d *DefaultEventHandler) AfterLaunch(_ QueueFramework) {
-	logs.Info("Queue Stopped")
 }
 
-func (d *DefaultEventHandler) OnWaitingMessage(_ QueueFramework) {
+func (d *DefaultEventHandler) OnWaitingMessage(qf QueueFramework) {
+	stat := qf.GetStatistic()
+	stat.Monitor()
 }
 
 func (d *DefaultEventHandler) ParseMessageBody(resp *ali_mns.MessageReceiveResponse) ([]byte, error) {
@@ -83,19 +85,32 @@ func (d *DefaultEventHandler) ConsumeMessage(_ []byte, _ *ali_mns.MessageReceive
 func (d *DefaultEventHandler) OnConsumeFailed(_ error, _ []byte, _ *ali_mns.MessageReceiveResponse) {
 }
 
-func (d *DefaultEventHandler) BeforeChangeVisibility(_ *ali_mns.AliMNSQueue, _ *ali_mns.MessageReceiveResponse) {
+func (d *DefaultEventHandler) BeforeChangeVisibility(_ ali_mns.AliMNSQueue, _ *ali_mns.MessageReceiveResponse) {
 }
-func (d *DefaultEventHandler) AfterChangeVisibility(_ *ali_mns.AliMNSQueue,
+func (d *DefaultEventHandler) AfterChangeVisibility(_ ali_mns.AliMNSQueue,
 	_ *ali_mns.MessageReceiveResponse,
 	_ *ali_mns.MessageVisibilityChangeResponse) {
 }
 
-func (d *DefaultEventHandler) OnChangeVisibilityFailed(_ *ali_mns.AliMNSQueue,
+func (d *DefaultEventHandler) OnChangeVisibilityFailed(_ ali_mns.AliMNSQueue,
 	_ *ali_mns.MessageReceiveResponse,
 	_ *ali_mns.MessageVisibilityChangeResponse) {
 }
 
-func (d *DefaultEventHandler) OnError(_ error, _ *ali_mns.AliMNSQueue,
-	_ *ali_mns.MessageReceiveResponse,
-	_ *ali_mns.MessageVisibilityChangeResponse) {
+func (d *DefaultEventHandler) OnError(err error, queue ali_mns.AliMNSQueue,
+	resp *ali_mns.MessageReceiveResponse,
+	vret *ali_mns.MessageVisibilityChangeResponse,
+	qf QueueFramework) {
+	if resp.DequeueCount >= int64(qf.GetConfig().MaxDequeueCount) {
+		if e := queue.DeleteMessage(vret.ReceiptHandle); e == nil {
+			logs.Info(fmt.Sprintf("Message Dequeue %d (force deleted): %s",
+				resp.DequeueCount, vret.ReceiptHandle))
+		} else {
+			if qf.GetConfig().Verbose {
+				logs.Debug("Force delete message failed!", e)
+			}
+		}
+	} else {
+		logs.Error(err)
+	}
 }

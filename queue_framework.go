@@ -1,6 +1,7 @@
 package mqpf
 
 import (
+	"fmt"
 	cl "github.com/akimimi/config_loader"
 	"github.com/aliyun/aliyun-mns-go-sdk"
 	"github.com/gogap/logs"
@@ -12,7 +13,7 @@ import (
 type QueueFramework interface {
 	RegisterBreakQueueOsSingal(sigs ...os.Signal)
 	GetConfig() cl.QueueConfig
-	GetStatistic() Statistic
+	GetStatistic() *Statistic
 	SetQueue(q ali_mns.AliMNSQueue)
 	HasValidQueue() bool
 	SetEventHandler(h QueueEventHandlerInterface)
@@ -41,8 +42,8 @@ func (qf *queueFramework) GetConfig() cl.QueueConfig {
 	return qf.config
 }
 
-func (qf *queueFramework) GetStatistic() Statistic {
-	return qf.stat
+func (qf *queueFramework) GetStatistic() *Statistic {
+	return &qf.stat
 }
 
 func (qf *queueFramework) SetQueue(q ali_mns.AliMNSQueue) {
@@ -76,6 +77,7 @@ func (qf *queueFramework) Launch() {
 			break
 		}
 		qf.stat.Loop()
+		qf.handler.OnWaitingMessage(qf)
 		endChan, respChan := make(chan int), make(chan ali_mns.MessageReceiveResponse)
 		errChan := make(chan error)
 		go func() {
@@ -84,8 +86,8 @@ func (qf *queueFramework) Launch() {
 				go qf.OnMessageReceived(&resp)
 				endChan <- 1
 			case err := <-errChan:
-				qf.stat.HandleError()
-				qf.handler.OnError(err, nil, nil, nil)
+				qf.stat.QueueError()
+				qf.handler.OnError(err, nil, nil, nil, qf)
 				endChan <- 1
 			}
 		}()
@@ -117,28 +119,28 @@ func (qf *queueFramework) OnMessageReceived(resp *ali_mns.MessageReceiveResponse
 
 		if err != nil {
 			qf.stat.HandleError()
-			qf.handler.OnError(err, &qf.queue, resp, vret)
+			qf.handler.OnError(err, qf.queue, resp, vret, qf)
 		}
 	})
 }
 
 func (qf *queueFramework) changeVisibility(resp *ali_mns.MessageReceiveResponse,
 	onSuccess func(vret *ali_mns.MessageVisibilityChangeResponse)) {
-	qf.handler.BeforeChangeVisibility(&qf.queue, resp)
+	qf.handler.BeforeChangeVisibility(qf.queue, resp)
 	if vret, e := qf.queue.ChangeMessageVisibility(resp.ReceiptHandle, int64(qf.config.VisibilityTimeout)); e == nil {
-		qf.handler.AfterChangeVisibility(&qf.queue, resp, &vret)
+		qf.handler.AfterChangeVisibility(qf.queue, resp, &vret)
 		onSuccess(&vret)
 	} else {
 		qf.stat.HandleError()
-		qf.handler.OnChangeVisibilityFailed(&qf.queue, resp, &vret)
-		qf.handler.OnError(e, &qf.queue, resp, &vret)
+		qf.handler.OnChangeVisibilityFailed(qf.queue, resp, &vret)
+		qf.handler.OnError(e, qf.queue, resp, &vret, qf)
 	}
 }
 
 func (qf *queueFramework) RegisterBreakQueueOsSingal(sigs ...os.Signal) {
 	signalChan := make(chan os.Signal, 1)
 	if sigs == nil {
-		signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+		signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGSTOP, syscall.SIGHUP)
 	} else {
 		signal.Notify(signalChan, sigs...)
 	}
@@ -149,8 +151,19 @@ func (qf *queueFramework) listenOsSignal(signalChan chan os.Signal) {
 	for {
 		select {
 		case s := <-signalChan:
-			logs.Info("Signal ", s.String(), " received, stopping queue daemon.....")
-			qf.Stop()
+			switch s {
+			case syscall.SIGINT:
+				fallthrough
+			case syscall.SIGTERM:
+				fallthrough
+			case syscall.SIGSTOP:
+				logs.Info("Signal ", s.String(), " received, stopping queue daemon.....")
+				qf.Stop()
+			case syscall.SIGHUP:
+				logs.Info(fmt.Sprintf("User Signal Received (%v)", s))
+				logs.Info(&qf.stat)
+				logs.Info(&qf.perfLog)
+			}
 		}
 	}
 }

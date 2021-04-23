@@ -5,6 +5,7 @@ import (
 	"github.com/akimimi/config_loader"
 	ali_mns "github.com/aliyun/aliyun-mns-go-sdk"
 	"testing"
+	"time"
 )
 
 func TestNewQueueFramework(t *testing.T) {
@@ -63,7 +64,7 @@ func TestQueueFramework_LaunchConsumeFailed(t *testing.T) {
 	msgCount := uint64(3)
 	queue := mockQueue{MaxReceived: msgCount}
 	queue.CreateQPSMonitor()
-	config := config_loader.QueueConfig{}
+	config := config_loader.QueueConfig{MaxDequeueCount: 3}
 	eventHandler := mockFailedEventHandler{}
 	qf := NewQueueFramework(&queue, config, &eventHandler)
 	queue.Qf = qf
@@ -78,8 +79,8 @@ func TestQueueFramework_LaunchConsumeFailed(t *testing.T) {
 }
 
 type mockQueue struct {
-	Qf *queueFramework
-	QpsMonitor *ali_mns.QPSMonitor
+	Qf          *queueFramework
+	QpsMonitor  *ali_mns.QPSMonitor
 	MaxReceived uint64
 	msgReceived uint64
 }
@@ -96,39 +97,40 @@ func (tq *mockQueue) Name() string {
 	return "test queue"
 }
 
-func (tq *mockQueue) SendMessage(message ali_mns.MessageSendRequest) (resp ali_mns.MessageSendResponse, err error) {
+func (tq *mockQueue) SendMessage(_ ali_mns.MessageSendRequest) (resp ali_mns.MessageSendResponse, err error) {
 	return ali_mns.MessageSendResponse{}, nil
 }
 
-func (tq *mockQueue) BatchSendMessage(messages ...ali_mns.MessageSendRequest) (resp ali_mns.BatchMessageSendResponse, err error) {
+func (tq *mockQueue) BatchSendMessage(_ ...ali_mns.MessageSendRequest) (resp ali_mns.BatchMessageSendResponse, err error) {
 	return ali_mns.BatchMessageSendResponse{}, nil
 }
 
-func (tq *mockQueue) ReceiveMessage(respChan chan ali_mns.MessageReceiveResponse, errChan chan error, waitseconds ...int64) {
+func (tq *mockQueue) ReceiveMessage(respChan chan ali_mns.MessageReceiveResponse, _ chan error, _ ...int64) {
 	respChan <- ali_mns.MessageReceiveResponse{}
 	tq.msgReceived++
 	if tq.msgReceived >= tq.MaxReceived {
+		time.Sleep(300 * time.Millisecond)
 		tq.Qf.Stop()
 	}
 }
 
-func (tq *mockQueue) BatchReceiveMessage(respChan chan ali_mns.BatchMessageReceiveResponse, errChan chan error, numOfMessages int32, waitseconds ...int64) {
+func (tq *mockQueue) BatchReceiveMessage(_ chan ali_mns.BatchMessageReceiveResponse, _ chan error, _ int32, _ ...int64) {
 }
 
-func (tq *mockQueue) PeekMessage(respChan chan ali_mns.MessageReceiveResponse, errChan chan error) {
+func (tq *mockQueue) PeekMessage(_ chan ali_mns.MessageReceiveResponse, _ chan error) {
 }
 
-func (tq *mockQueue) BatchPeekMessage(respChan chan ali_mns.BatchMessageReceiveResponse, errChan chan error, numOfMessages int32) {
+func (tq *mockQueue) BatchPeekMessage(_ chan ali_mns.BatchMessageReceiveResponse, _ chan error, _ int32) {
 }
 
-func (tq *mockQueue) DeleteMessage(receiptHandle string) (err error) {
+func (tq *mockQueue) DeleteMessage(_ string) (err error) {
 	return nil
 }
-func (tq *mockQueue) BatchDeleteMessage(receiptHandles ...string) (resp ali_mns.BatchMessageDeleteErrorResponse, err error) {
+func (tq *mockQueue) BatchDeleteMessage(_ ...string) (resp ali_mns.BatchMessageDeleteErrorResponse, err error) {
 	return ali_mns.BatchMessageDeleteErrorResponse{}, nil
 }
 
-func (tq *mockQueue) ChangeMessageVisibility(receiptHandle string, visibilityTimeout int64) (resp ali_mns.MessageVisibilityChangeResponse, err error) {
+func (tq *mockQueue) ChangeMessageVisibility(_ string, _ int64) (resp ali_mns.MessageVisibilityChangeResponse, err error) {
 	return ali_mns.MessageVisibilityChangeResponse{}, nil
 }
 
@@ -136,6 +138,6 @@ type mockFailedEventHandler struct {
 	DefaultEventHandler
 }
 
-func (eh *mockFailedEventHandler) ConsumeMessage(body []byte, resp *ali_mns.MessageReceiveResponse) error {
+func (eh *mockFailedEventHandler) ConsumeMessage(_ []byte, _ *ali_mns.MessageReceiveResponse) error {
 	return errors.New("Mock failed event handler, consume failed!")
 }
