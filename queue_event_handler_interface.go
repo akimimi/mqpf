@@ -56,6 +56,10 @@ type DefaultEventHandler struct{}
 func (d *DefaultEventHandler) BeforeLaunch(qf QueueFramework) {
 	if qf != nil {
 		qf.RegisterBreakQueueOsSingal()
+		stat := qf.GetStatistic()
+		if stat != nil {
+			stat.Start()
+		}
 	}
 }
 
@@ -64,7 +68,9 @@ func (d *DefaultEventHandler) AfterLaunch(_ QueueFramework) {
 
 func (d *DefaultEventHandler) OnWaitingMessage(qf QueueFramework) {
 	stat := qf.GetStatistic()
-	stat.Monitor()
+	if stat != nil {
+		stat.Monitor()
+	}
 }
 
 func (d *DefaultEventHandler) ParseMessageBody(resp *ali_mns.MessageReceiveResponse) ([]byte, error) {
@@ -101,7 +107,7 @@ func (d *DefaultEventHandler) OnError(err error, queue ali_mns.AliMNSQueue,
 	resp *ali_mns.MessageReceiveResponse,
 	vret *ali_mns.MessageVisibilityChangeResponse,
 	qf QueueFramework) {
-	if resp.DequeueCount >= int64(qf.GetConfig().MaxDequeueCount) {
+	if resp != nil && resp.DequeueCount >= int64(qf.GetConfig().MaxDequeueCount) {
 		if e := queue.DeleteMessage(vret.ReceiptHandle); e == nil {
 			logs.Info(fmt.Sprintf("Message Dequeue %d (force deleted): %s",
 				resp.DequeueCount, vret.ReceiptHandle))

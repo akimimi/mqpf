@@ -17,7 +17,7 @@ func main() {
 
 	// create queue to make sure queue exists
 	err := queueManager.CreateQueue(queueConfig.QueueName, int32(queueConfig.DelaySeconds),
-		int32(queueConfig.MaxMessageSize), int32(queueConfig.MessageRententionPeriod),
+		int32(queueConfig.MaxMessageSize), int32(queueConfig.MessageRetentionPeriod),
 		int32(queueConfig.VisibilityTimeout), int32(queueConfig.PollingWaitSeconds), 2)
 
 	if err != nil && !ali_mns.ERR_MNS_QUEUE_ALREADY_EXIST_AND_HAVE_SAME_ATTR.IsEqual(err) {

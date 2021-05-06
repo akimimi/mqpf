@@ -1,14 +1,19 @@
 package mqpf
 
 import (
+	"errors"
 	"fmt"
 	cl "github.com/akimimi/config_loader"
 	"github.com/aliyun/aliyun-mns-go-sdk"
 	"github.com/gogap/logs"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
+	"time"
 )
+
+const defaultStopQueueSeconds = 90
 
 type QueueFramework interface {
 	RegisterBreakQueueOsSingal(sigs ...os.Signal)
@@ -23,16 +28,17 @@ type QueueFramework interface {
 }
 
 type queueFramework struct {
-	queue       ali_mns.AliMNSQueue
-	config      cl.QueueConfig
-	handler     QueueEventHandlerInterface
-	breakByUser bool
-	stat        Statistic
-	perfLog     performanceLog
+	queue            ali_mns.AliMNSQueue
+	config           cl.QueueConfig
+	handler          QueueEventHandlerInterface
+	breakByUser      bool
+	stat             Statistic
+	perfLog          performanceLog
+	stopQueueSeconds int
 }
 
 func NewQueueFramework(q ali_mns.AliMNSQueue, c cl.QueueConfig, h QueueEventHandlerInterface) *queueFramework {
-	qf := queueFramework{config: c, handler: &DefaultEventHandler{}}
+	qf := queueFramework{config: c, handler: &DefaultEventHandler{}, stopQueueSeconds: defaultStopQueueSeconds}
 	qf.SetQueue(q)
 	qf.SetEventHandler(h)
 	return &qf
@@ -71,8 +77,9 @@ func (qf *queueFramework) Launch() {
 	if !qf.HasValidQueue() || !qf.HasEventHandler() {
 		return
 	}
+
+	wg := sync.WaitGroup{} // wait for OnMessageReceived returns
 	for {
-		// go printLogs(queue)
 		if qf.breakByUser {
 			break
 		}
@@ -83,7 +90,8 @@ func (qf *queueFramework) Launch() {
 		go func() {
 			select {
 			case resp := <-respChan:
-				go qf.OnMessageReceived(&resp)
+				wg.Add(1)
+				go qf.OnMessageReceived(&resp, &wg)
 				endChan <- 1
 			case err := <-errChan:
 				qf.stat.QueueError()
@@ -94,20 +102,48 @@ func (qf *queueFramework) Launch() {
 		qf.queue.ReceiveMessage(respChan, errChan, int64(qf.config.PollingWaitSeconds))
 		<-endChan
 	}
-	qf.handler.AfterLaunch(qf)
+
+	// wait for every OnMessageReceived returns in no longer than qf.stopQueueSeconds
+	waitGroupFinished := make(chan bool)
+	go func() {
+		wg.Wait()
+		waitGroupFinished <- true
+	}()
+	select {
+	case <-waitGroupFinished:
+	case <-time.After(time.Duration(qf.stopQueueSeconds) * time.Second):
+	}
 	qf.breakByUser = false
+	qf.handler.AfterLaunch(qf)
 }
 
 func (qf *queueFramework) Stop() {
 	qf.breakByUser = true
 }
 
-func (qf *queueFramework) OnMessageReceived(resp *ali_mns.MessageReceiveResponse) {
+func (qf *queueFramework) OnMessageReceived(resp *ali_mns.MessageReceiveResponse, wg *sync.WaitGroup) {
+	defer wg.Done()
 	qf.stat.MessageReceived()
 	qf.changeVisibility(resp, func(vret *ali_mns.MessageVisibilityChangeResponse) {
 		bodyBytes, err := qf.handler.ParseMessageBody(resp)
 		if err == nil {
-			err = qf.handler.ConsumeMessage(bodyBytes, resp)
+			finishChan := make(chan error)
+			if qf.GetConfig().ConsumeTimeout > 0 { // limit ConsumeMessageDuration
+				go func() {
+					e := qf.handler.ConsumeMessage(bodyBytes, resp)
+					finishChan <- e
+				}()
+				select {
+				case e := <-finishChan:
+					err = e
+				case <-time.After(time.Duration(qf.GetConfig().ConsumeTimeout) * time.Second):
+					err = errors.New(
+						fmt.Sprintf("ConsumeMessage timeout in %d seconds.", qf.GetConfig().ConsumeTimeout))
+				}
+			} else {
+				err = qf.handler.ConsumeMessage(bodyBytes, resp)
+			}
+
 			if err == nil {
 				if err = qf.queue.DeleteMessage(vret.ReceiptHandle); err == nil {
 					qf.stat.HandleSuccess()
@@ -161,8 +197,8 @@ func (qf *queueFramework) listenOsSignal(signalChan chan os.Signal) {
 				qf.Stop()
 			case syscall.SIGHUP:
 				logs.Info(fmt.Sprintf("User Signal Received (%v)", s))
-				logs.Info(&qf.stat)
-				logs.Info(&qf.perfLog)
+				logs.Info(qf.stat.String())
+				logs.Info(qf.stat.Performance())
 			}
 		}
 	}

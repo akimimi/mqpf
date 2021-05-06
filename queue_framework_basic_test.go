@@ -78,6 +78,26 @@ func TestQueueFramework_LaunchConsumeFailed(t *testing.T) {
 	}
 }
 
+func TestQueueFramework_ConsumeMessageTimeout(t *testing.T) {
+	msgCount := uint64(3)
+	queue := mockQueue{MaxReceived: msgCount}
+	queue.CreateQPSMonitor()
+	config := config_loader.QueueConfig{}
+	config.ConsumeTimeout = 1
+	config.MaxDequeueCount = 1
+	eventHandler := mockLazyEventHandler{sleepSeconds: 5}
+	qf := NewQueueFramework(&queue, config, &eventHandler)
+	queue.Qf = qf
+	qf.Launch()
+	stat := qf.GetStatistic()
+	if stat.Fetch("msgreceived") != msgCount {
+		t.Errorf("Message received count expected %d, actual %d", msgCount, stat.Fetch("msgreceived"))
+	}
+	if stat.Fetch("error") != msgCount {
+		t.Errorf("Error count expected %d, actual %d", msgCount, stat.Fetch("error"))
+	}
+}
+
 type mockQueue struct {
 	Qf          *queueFramework
 	QpsMonitor  *ali_mns.QPSMonitor
@@ -140,4 +160,14 @@ type mockFailedEventHandler struct {
 
 func (eh *mockFailedEventHandler) ConsumeMessage(_ []byte, _ *ali_mns.MessageReceiveResponse) error {
 	return errors.New("Mock failed event handler, consume failed!")
+}
+
+type mockLazyEventHandler struct {
+	sleepSeconds int
+	DefaultEventHandler
+}
+
+func (e *mockLazyEventHandler) ConsumeMessage(_ []byte, _ *ali_mns.MessageReceiveResponse) error {
+	time.Sleep(time.Duration(e.sleepSeconds) * time.Second)
+	return nil
 }
