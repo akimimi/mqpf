@@ -45,6 +45,14 @@ type QueueEventHandlerInterface interface {
 	OnChangeVisibilityFailed(q ali_mns.AliMNSQueue, resp *ali_mns.MessageReceiveResponse,
 		vr *ali_mns.MessageVisibilityChangeResponse)
 
+	// OnWaitingProcessing is invoked whenever too many messages are processing and the queue will
+	// wait for a few seconds. If the queue need to wait for over config.OverloadBreakSeconds,
+	// the queue will stop itself.
+	OnWaitingProcessing(qf QueueFramework)
+
+	// OnRecoverProcessing is invoked when the queue is recovered from waiting for processing.
+	OnRecoverProcessing(qf QueueFramework)
+
 	// OnError is invoked whenever an error happens.
 	OnError(err error, q ali_mns.AliMNSQueue,
 		rr *ali_mns.MessageReceiveResponse, vr *ali_mns.MessageVisibilityChangeResponse,
@@ -119,4 +127,13 @@ func (d *DefaultEventHandler) OnError(err error, queue ali_mns.AliMNSQueue,
 	} else {
 		logs.Error(err)
 	}
+}
+
+func (d *DefaultEventHandler) OnWaitingProcessing(qf QueueFramework) {
+	logs.Info(fmt.Sprintf(
+		"Too many messages are processing, waiting for %d seconds.", qf.WaitProcessingSeconds(false)))
+}
+
+func (d *DefaultEventHandler) OnRecoverProcessing(_ QueueFramework) {
+	logs.Info("Restart to receive messages.")
 }

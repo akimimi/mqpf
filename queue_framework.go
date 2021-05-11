@@ -3,7 +3,7 @@ package mqpf
 import (
 	"errors"
 	"fmt"
-	cl "github.com/akimimi/config_loader"
+	cl "github.com/akimimi/config-loader"
 	"github.com/aliyun/aliyun-mns-go-sdk"
 	"github.com/gogap/logs"
 	"os"
@@ -25,16 +25,19 @@ type QueueFramework interface {
 	HasEventHandler() bool
 	Launch()
 	Stop()
+	WaitProcessingSeconds(pop bool) int
 }
 
 type queueFramework struct {
-	queue            ali_mns.AliMNSQueue
-	config           cl.QueueConfig
-	handler          QueueEventHandlerInterface
-	breakByUser      bool
-	stat             Statistic
-	perfLog          performanceLog
-	stopQueueSeconds int
+	queue                         ali_mns.AliMNSQueue
+	config                        cl.QueueConfig
+	handler                       QueueEventHandlerInterface
+	breakByUser                   bool
+	stat                          Statistic
+	perfLog                       performanceLog
+	stopQueueSeconds              int
+	waitProcessingSeconds         int
+	previousWaitProcessingSeconds int
 }
 
 func NewQueueFramework(q ali_mns.AliMNSQueue, c cl.QueueConfig, h QueueEventHandlerInterface) *queueFramework {
@@ -87,19 +90,38 @@ func (qf *queueFramework) Launch() {
 		qf.handler.OnWaitingMessage(qf)
 		endChan, respChan := make(chan int), make(chan ali_mns.MessageReceiveResponse)
 		errChan := make(chan error)
-		go func() {
-			select {
-			case resp := <-respChan:
-				wg.Add(1)
-				go qf.OnMessageReceived(&resp, &wg)
+		handling := qf.stat.Fetch("msgreceived") - qf.stat.Fetch("success") - qf.stat.Fetch("error")
+
+		if handling < uint64(qf.config.MaxProcessingMessage) { // can handle message
+			go func() {
+				select {
+				case resp := <-respChan:
+					wg.Add(1)
+					go qf.OnMessageReceived(&resp, &wg)
+					qf.ResetWaitProcessingSeconds()
+				case err := <-errChan:
+					qf.stat.QueueError()
+					qf.handler.OnError(err, nil, nil, nil, qf)
+					qf.ResetWaitProcessingSeconds()
+				}
 				endChan <- 1
-			case err := <-errChan:
-				qf.stat.QueueError()
-				qf.handler.OnError(err, nil, nil, nil, qf)
+			}()
+			qf.queue.ReceiveMessage(respChan, errChan, int64(qf.config.PollingWaitSeconds))
+		} else { // too many messages are being processed, wait for a few seconds
+			go func() {
+				select {
+				case <-time.After(time.Duration(qf.WaitProcessingSeconds(true)) * time.Second):
+					qf.handler.OnRecoverProcessing(qf)
+				}
 				endChan <- 1
+			}()
+			if qf.WaitProcessingSeconds(false) > qf.config.OverloadBreakSeconds {
+				break // break the for loop to avoid non-stop waiting
+			} else {
+				qf.stat.Wait()
+				qf.handler.OnWaitingProcessing(qf)
 			}
-		}()
-		qf.queue.ReceiveMessage(respChan, errChan, int64(qf.config.PollingWaitSeconds))
+		}
 		<-endChan
 	}
 
@@ -119,6 +141,24 @@ func (qf *queueFramework) Launch() {
 
 func (qf *queueFramework) Stop() {
 	qf.breakByUser = true
+}
+
+func (qf *queueFramework) WaitProcessingSeconds(pop bool) int {
+	nw, np := 0, 0
+	if qf.waitProcessingSeconds == 0 {
+		nw, np = 1, 1
+	} else {
+		nw, np = qf.waitProcessingSeconds+qf.previousWaitProcessingSeconds, qf.waitProcessingSeconds
+	}
+	if pop {
+		qf.waitProcessingSeconds = nw
+		qf.previousWaitProcessingSeconds = np
+	}
+	return nw
+}
+
+func (qf *queueFramework) ResetWaitProcessingSeconds() {
+	qf.waitProcessingSeconds, qf.previousWaitProcessingSeconds = 0, 0
 }
 
 func (qf *queueFramework) OnMessageReceived(resp *ali_mns.MessageReceiveResponse, wg *sync.WaitGroup) {

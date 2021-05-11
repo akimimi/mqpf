@@ -1,7 +1,7 @@
 gitee.com/akimimi/getuigo v0.0.0-20200507122450-bb8398c0d2f2 h1:3jk+oi2TvrxxHKLlERczlGoCK+fqghTpMcKNDFx/3C4=
 gitee.com/akimimi/getuigo v0.0.0-20200507122450-bb8398c0d2f2/go.mod h1:vaAZ877PhtrjcVjoIJ8gawl2uFidNbQS+4CHnfzfT44=
-github.com/akimimi/config_loader v0.0.0-20210430035448-2519460db3b0 h1:AwtiwFye3oXf7uc4XuGcOLKbW4lHbdvA39txt4TWFNc=
-github.com/akimimi/config_loader v0.0.0-20210430035448-2519460db3b0/go.mod h1:507Tt+FbrdG2i2cwCEtMZva9O0tabbXLpQZ4WjCCbuE=
+github.com/akimimi/config-loader v0.0.0-20210511142013-a6b4283e3def h1:bYxAsmd3qqjjZNrJiFeWMYxnwKEuL9cTpXbrT92mA9c=
+github.com/akimimi/config-loader v0.0.0-20210511142013-a6b4283e3def/go.mod h1:saWZX8Mg+g2yx57anatKt0m/id+ioYbv46F55tvD2y4=
 github.com/aliyun/aliyun-mns-go-sdk v0.0.0-20210305050620-d1b5875bda58 h1:hX1oYyN7d0y7GHwli6trhovosNAKo9f60uC3FPHMjoQ=
 github.com/aliyun/aliyun-mns-go-sdk v0.0.0-20210305050620-d1b5875bda58/go.mod h1:eD/mEH7SwtLSwI9p8fP9VTH2cYM3wFSY1WNaxEdLIFU=
 github.com/andybalholm/brotli v1.0.1 h1:KqhlKozYbRtJvsPrrEeXcO+N2l6NYT5A2QAFmSULpEc=

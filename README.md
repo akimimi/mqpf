@@ -19,7 +19,7 @@ Sample code is provided in sample directory.
 3. Invoke ParseMessageBody interface if the queue receives a message.
 4. Invoke ConsumeMessage interface for user business logic.
 5. If ConsumeMessage successfully disposes the message, the message will be deleted.
-   Otherwise, OnConsumeFailed interface will be invoked and the message will be visible
+   Otherwise, OnConsumeFailed interface will be invoked, and the message will be visible
    after *VisibilityTimeout* seconds.
 6. Go back to step 2.
 7. User can stop the flow by invoke Stop interface, AfterLaunch will be invoked.
@@ -37,4 +37,17 @@ User can log and process the error message.
 
 OnWaitingMessage is invoked when the queue framework starts to wait for one queue message.
 
+OnWaitingProcessing is invoked whenever too many messages are processing and the queue will 
+wait for a few seconds. If the queue need to wait for over config.OverloadBreakSeconds,
+the queue will stop itself.
 
+OnRecoverProcessing is invoked when the queue is recovered from waiting for processing.
+
+## Flow Control Scheme
+
+The queue framework will wait for a few seconds, if too many messages are being processed.
+When the count of processing messages is greater than QueueConfig.MaxProcessingMessage, 
+a timer is triggered to wait for the queue to be more idle. The seconds to wait increases 
+if the queue needs to wait for the processing continuously. 
+
+By default, the queue will stop itself if the waiting seconds is longer than QueueConfig.OverloadBreakSeconds.

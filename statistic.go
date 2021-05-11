@@ -16,6 +16,7 @@ type Statistic struct {
 	handleSuccess uint64
 	handleError   uint64
 	queueError    uint64
+	wait          uint64
 	startAt       time.Time
 	logTime       time.Time
 	lastLog       *Statistic
@@ -25,8 +26,8 @@ type Statistic struct {
 }
 
 func (ss Statistic) String() string {
-	return fmt.Sprintf("Service Statistic  R: %d, S: %d, F: %d, E: %d, I:%s",
-		ss.msgReceived, ss.handleSuccess, ss.handleError, ss.queueError,
+	return fmt.Sprintf("Service Statistic  R: %d, S: %d, F: %d, E: %d, W: %d, I: %s",
+		ss.msgReceived, ss.handleSuccess, ss.handleError, ss.queueError, ss.wait,
 		ss.startAt.Format("2006-01-02 15:04:05 +0800"))
 }
 
@@ -52,6 +53,10 @@ func (ss *Statistic) HandleError(count ...uint64) {
 
 func (ss *Statistic) QueueError(count ...uint64) {
 	ss.inc(&ss.queueError, count...)
+}
+
+func (ss *Statistic) Wait(count ...uint64) {
+	ss.inc(&ss.wait, count...)
 }
 
 func (ss *Statistic) inc(addr *uint64, count ...uint64) {
@@ -98,7 +103,7 @@ func (ss *Statistic) Monitor() bool {
 	return updateLog
 }
 
-func (ss *Statistic)Performance() string {
+func (ss *Statistic) Performance() string {
 	return ss.perflog.String()
 }
 
@@ -121,19 +126,21 @@ func (ss *Statistic) Fetch(paramName string) uint64 {
 	var rt uint64
 	switch paramName {
 	case "loop":
-		rt = ss.loop
+		rt = atomic.LoadUint64(&ss.loop)
 	case "msgreceived":
-		rt = ss.msgReceived
+		rt = atomic.LoadUint64(&ss.msgReceived)
 	case "success":
 		fallthrough
 	case "handlesuccess":
-		rt = ss.handleSuccess
+		rt = atomic.LoadUint64(&ss.handleSuccess)
 	case "error":
 		fallthrough
 	case "handleerror":
-		rt = ss.handleError
+		rt = atomic.LoadUint64(&ss.handleError)
 	case "queueerror":
-		rt = ss.queueError
+		rt = atomic.LoadUint64(&ss.queueError)
+	case "wait":
+		rt = atomic.LoadUint64(&ss.wait)
 	case "duration":
 		rt = uint64(ss.duration.Seconds())
 	}
@@ -160,7 +167,7 @@ func (pl *performanceLog) update(s *Statistic) {
 }
 
 func (pl performanceLog) String() string {
-	return fmt.Sprintf("Performance R: %f, S: %f, F: %f, E: %f, T:%s",
+	return fmt.Sprintf("Performance R: %f, S: %f, F: %f, E: %f, T: %s",
 		pl.maxRecvQps, pl.maxSuccessQps, pl.maxErrorQps, pl.maxQueueErrorQps,
 		pl.maxTime.Format("2006-01-02 15:04:05 +0800"))
 }

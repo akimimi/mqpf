@@ -2,13 +2,13 @@ package main
 
 import (
 	"gitee.com/akimimi/mqpf"
-	"github.com/akimimi/config_loader"
+	cl "github.com/akimimi/config-loader"
 	ali_mns "github.com/aliyun/aliyun-mns-go-sdk"
 	"github.com/gogap/logs"
 )
 
 func main() {
-	queueConfig := config_loader.QueueConfig{}
+	queueConfig := cl.QueueConfig{}
 	queueConfig.LoadByFile("sample/sample_queue_config.yaml")
 
 	client := ali_mns.NewAliMNSClient(
