@@ -88,7 +88,7 @@ func (qf *queueFramework) Launch() {
 		}
 		qf.stat.Loop()
 		qf.handler.OnWaitingMessage(qf)
-		endChan, respChan := make(chan int), make(chan ali_mns.MessageReceiveResponse)
+		endChan, respChan := make(chan int), make(chan ali_mns.BatchMessageReceiveResponse)
 		errChan := make(chan error)
 		handling := qf.stat.Fetch("msgreceived") - qf.stat.Fetch("success") - qf.stat.Fetch("error")
 
@@ -96,8 +96,10 @@ func (qf *queueFramework) Launch() {
 			go func() {
 				select {
 				case resp := <-respChan:
-					wg.Add(1)
-					go qf.OnMessageReceived(&resp, &wg)
+					for _, message := range resp.Messages {
+						wg.Add(1)
+						go qf.OnMessageReceived(&message, &wg)
+					}
 					qf.ResetWaitProcessingSeconds()
 				case err := <-errChan:
 					qf.stat.QueueError()
@@ -106,7 +108,8 @@ func (qf *queueFramework) Launch() {
 				}
 				endChan <- 1
 			}()
-			qf.queue.ReceiveMessage(respChan, errChan, int64(qf.config.PollingWaitSeconds))
+			qf.queue.BatchReceiveMessage(respChan, errChan,
+				int32(qf.config.RecvMessageBatchSize), int64(qf.config.PollingWaitSeconds))
 		} else { // too many messages are being processed, wait for a few seconds
 			go func() {
 				select {

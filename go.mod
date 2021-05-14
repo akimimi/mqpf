@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	gitee.com/akimimi/getuigo v0.0.0-20200507122450-bb8398c0d2f2 // indirect
-	github.com/akimimi/config-loader v0.0.0-20210511142013-a6b4283e3def
+	github.com/akimimi/config-loader v0.0.0-20210513164729-f29d10a82762
 	github.com/aliyun/aliyun-mns-go-sdk v0.0.0-20210305050620-d1b5875bda58
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
 	github.com/gogap/logs v0.0.0-20150329044033-31c6d1e28b2c
