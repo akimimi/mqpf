@@ -1,7 +1,7 @@
 package main
 
 import (
-	"gitee.com/akimimi/mqpf"
+	"github.com/akimimi/mqpf"
 	cl "github.com/akimimi/config-loader"
 	ali_mns "github.com/aliyun/aliyun-mns-go-sdk"
 	"github.com/gogap/logs"
