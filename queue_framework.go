@@ -1,7 +1,6 @@
 package mqpf
 
 import (
-	"errors"
 	"fmt"
 	cl "github.com/akimimi/config-loader"
 	"github.com/aliyun/aliyun-mns-go-sdk"
@@ -15,6 +14,7 @@ import (
 
 const defaultStopQueueSeconds = 90
 
+// QueueFramework is the interface that should be satisfied for any modified queue framework.
 type QueueFramework interface {
 	RegisterBreakQueueOsSingal(sigs ...os.Signal)
 	GetConfig() cl.QueueConfig
@@ -40,6 +40,8 @@ type queueFramework struct {
 	previousWaitProcessingSeconds int
 }
 
+// NewQueueFramework creates and returns a queue framework which consists with a provided event handler,
+// and configures the queue framework by provided QueueConfig.
 func NewQueueFramework(q ali_mns.AliMNSQueue, c cl.QueueConfig, h QueueEventHandlerInterface) *queueFramework {
 	qf := queueFramework{config: c, handler: &DefaultEventHandler{}, stopQueueSeconds: defaultStopQueueSeconds}
 	qf.SetQueue(q)
@@ -184,8 +186,7 @@ func (qf *queueFramework) OnMessageReceived(resp *ali_mns.MessageReceiveResponse
 				case e := <-finishChan:
 					err = e
 				case <-time.After(time.Duration(qf.GetConfig().ConsumeTimeout) * time.Second):
-					err = errors.New(
-						fmt.Sprintf("ConsumeMessage timeout in %d seconds.", qf.GetConfig().ConsumeTimeout))
+					err = fmt.Errorf("timeout for ConsumeMessage in %d seconds", qf.GetConfig().ConsumeTimeout)
 				}
 			} else {
 				err = qf.handler.ConsumeMessage(bodyBytes, resp)

@@ -7,6 +7,8 @@ import (
 	"github.com/gogap/logs"
 )
 
+// QueueEventHandlerInterface defines the interfaces for queue event handler.
+// User should implement all the API functions, or derive from DefaultEventHandler struct.
 type QueueEventHandlerInterface interface {
 	// BeforeLaunch function is invoked when framework Launch function starts.
 	// qf QueueFramework is the framework
@@ -61,6 +63,7 @@ type QueueEventHandlerInterface interface {
 
 type DefaultEventHandler struct{}
 
+// BeforeLaunch registers system INT, TERM, STOP signals to stop the queue, and HUP signal to update the performance log.
 func (d *DefaultEventHandler) BeforeLaunch(qf QueueFramework) {
 	if qf != nil {
 		qf.RegisterBreakQueueOsSingal()
@@ -71,9 +74,11 @@ func (d *DefaultEventHandler) BeforeLaunch(qf QueueFramework) {
 	}
 }
 
+// AfterLaunch does nothing by default.
 func (d *DefaultEventHandler) AfterLaunch(_ QueueFramework) {
 }
 
+// OnWaitingMessage only updates statistic logs by default.
 func (d *DefaultEventHandler) OnWaitingMessage(qf QueueFramework) {
 	stat := qf.GetStatistic()
 	if stat != nil {
@@ -81,6 +86,7 @@ func (d *DefaultEventHandler) OnWaitingMessage(qf QueueFramework) {
 	}
 }
 
+// ParseMessageBody decodes response string in base64 by default.
 func (d *DefaultEventHandler) ParseMessageBody(resp *ali_mns.MessageReceiveResponse) ([]byte, error) {
 	if resp != nil {
 		return base64.StdEncoding.DecodeString(resp.MessageBody)
@@ -89,29 +95,37 @@ func (d *DefaultEventHandler) ParseMessageBody(resp *ali_mns.MessageReceiveRespo
 	}
 }
 
+// OnParseMessageBodyFailed does nothing by default.
 func (d *DefaultEventHandler) OnParseMessageBodyFailed(_ error, _ *ali_mns.MessageReceiveResponse) {
 }
 
+// ConsumeMessage does nothing by default.
 func (d *DefaultEventHandler) ConsumeMessage(_ []byte, _ *ali_mns.MessageReceiveResponse) error {
 	return nil
 }
 
+// OnConsumeFailed does nothing by default.
 func (d *DefaultEventHandler) OnConsumeFailed(_ error, _ []byte, _ *ali_mns.MessageReceiveResponse) {
 }
 
+// BeforeChangeVisibility does nothing by default.
 func (d *DefaultEventHandler) BeforeChangeVisibility(_ ali_mns.AliMNSQueue, _ *ali_mns.MessageReceiveResponse) {
 }
 
+// AfterChangeVisibility does nothing by default.
 func (d *DefaultEventHandler) AfterChangeVisibility(_ ali_mns.AliMNSQueue,
 	_ *ali_mns.MessageReceiveResponse,
 	_ *ali_mns.MessageVisibilityChangeResponse) {
 }
 
+// OnChangeVisibilityFailed does nothing by default.
 func (d *DefaultEventHandler) OnChangeVisibilityFailed(_ ali_mns.AliMNSQueue,
 	_ *ali_mns.MessageReceiveResponse,
 	_ *ali_mns.MessageVisibilityChangeResponse) {
 }
 
+// OnError logs the error in statistic and logger.
+// The message will be deleted if dequeue count is over MaxDequeueCount config.
 func (d *DefaultEventHandler) OnError(err error, queue ali_mns.AliMNSQueue,
 	resp *ali_mns.MessageReceiveResponse,
 	vret *ali_mns.MessageVisibilityChangeResponse,
@@ -130,11 +144,13 @@ func (d *DefaultEventHandler) OnError(err error, queue ali_mns.AliMNSQueue,
 	}
 }
 
+// OnWaitingProcessing only logs waiting message by default.
 func (d *DefaultEventHandler) OnWaitingProcessing(qf QueueFramework) {
 	logs.Info(fmt.Sprintf(
 		"Too many messages are processing, waiting for %d seconds.", qf.WaitProcessingSeconds(false)))
 }
 
+// OnRecoverProcessing only logs queue recovered message by default.
 func (d *DefaultEventHandler) OnRecoverProcessing(_ QueueFramework) {
 	logs.Info("Restart to receive messages.")
 }

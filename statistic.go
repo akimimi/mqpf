@@ -8,8 +8,10 @@ import (
 	"time"
 )
 
+// MinLogDuration is the minimum log period for top QPS monitor
 const MinLogDuration = 1 // seconds
 
+// Statistic is a struct for queue performance monitoring data
 type Statistic struct {
 	loop          uint64
 	msgReceived   uint64
@@ -31,30 +33,43 @@ func (ss Statistic) String() string {
 		ss.startAt.Format("2006-01-02 15:04:05 +0800"))
 }
 
+// Start is invoked to log when the monitoring task begins.
 func (ss *Statistic) Start() {
 	ss.startAt = time.Now()
 }
 
+// Loop adds 'count' for loops that fetched no messages in statistic value.
+// If count is not provided, the default value for count is 1.
 func (ss *Statistic) Loop(count ...uint64) {
 	ss.inc(&ss.loop, count...)
 }
 
+// MessageReceived adds 'count' for received message in statistic value.
+// If count is not provided, the default value for count is 1.
 func (ss *Statistic) MessageReceived(count ...uint64) {
 	ss.inc(&ss.msgReceived, count...)
 }
 
+// HandleSuccess adds 'count' for successful handled situation in statistic value.
+// If count is not provided, the default value for count is 1.
 func (ss *Statistic) HandleSuccess(count ...uint64) {
 	ss.inc(&ss.handleSuccess, count...)
 }
 
+// HandleError adds 'count' for encountering problems situation in statistic value.
+// If count is not provided, the default value for count is 1.
 func (ss *Statistic) HandleError(count ...uint64) {
 	ss.inc(&ss.handleError, count...)
 }
 
+// QueueError adds 'count' for queue problems in statistic value.
+// If count is not provided, the default value for count is 1.
 func (ss *Statistic) QueueError(count ...uint64) {
 	ss.inc(&ss.queueError, count...)
 }
 
+// Wait adds 'count' for queue wait in statistic value.
+// If count is not provided, the default value for count is 1.
 func (ss *Statistic) Wait(count ...uint64) {
 	ss.inc(&ss.wait, count...)
 }
@@ -70,6 +85,7 @@ func (ss *Statistic) inc(addr *uint64, count ...uint64) {
 	}
 }
 
+// Monitor update periodMonitor objects which logs a period performance for queue handling.
 func (ss *Statistic) Monitor() bool {
 	updateLog := false
 	if ss.lastLog == nil {
@@ -103,10 +119,12 @@ func (ss *Statistic) Monitor() bool {
 	return updateLog
 }
 
+// Performance returns performance log result in string format.
 func (ss *Statistic) Performance() string {
 	return ss.perflog.String()
 }
 
+// MonitorLog returns period monitor log in string format.
 func (ss *Statistic) MonitorLog() string {
 	if ss.periodMonitor == nil {
 		return ""
@@ -121,6 +139,7 @@ func (ss *Statistic) MonitorLog() string {
 	}
 }
 
+// Fetch returns statistic value by paramName request. The function is thread safe.
 func (ss *Statistic) Fetch(paramName string) uint64 {
 	paramName = strings.ToLower(paramName)
 	var rt uint64
