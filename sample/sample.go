@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/akimimi/mqpf"
 	cl "github.com/akimimi/config-loader"
+	"github.com/akimimi/mqpf"
 	ali_mns "github.com/aliyun/aliyun-mns-go-sdk"
 	"github.com/gogap/logs"
 )
@@ -28,29 +28,29 @@ func main() {
 	}
 	queue := ali_mns.NewMNSQueue(queueConfig.QueueName, client)
 
-	qf := mqpf.NewQueueFramework(queue, queueConfig, &EventHandler{})
+	qf := mqpf.NewQueueFramework(queue, queueConfig, &sampleEventHandler{})
 	qf.Launch()
 }
 
-type EventHandler struct {
+type sampleEventHandler struct {
 	mqpf.DefaultEventHandler
 }
 
-func (e *EventHandler) BeforeLaunch(qf mqpf.QueueFramework) {
-	logs.Info("EventHandler before launch")
+func (e *sampleEventHandler) BeforeLaunch(qf mqpf.QueueFramework) {
+	logs.Info("sampleEventHandler before launch")
 	e.DefaultEventHandler.BeforeLaunch(qf)
 }
 
-func (e *EventHandler) AfterLaunch(_ mqpf.QueueFramework) {
-	logs.Info("EventHandler after launch")
+func (e *sampleEventHandler) AfterLaunch(_ mqpf.QueueFramework) {
+	logs.Info("sampleEventHandler after launch")
 }
 
-func (e *EventHandler) ConsumeMessage(body []byte, _ *ali_mns.MessageReceiveResponse) error {
+func (e *sampleEventHandler) ConsumeMessage(body []byte, _ *ali_mns.MessageReceiveResponse) error {
 	logs.Info("Consume message: ", string(body))
 	return nil
 }
 
-func (e *EventHandler) OnError(err error, q ali_mns.AliMNSQueue,
+func (e *sampleEventHandler) OnError(err error, q ali_mns.AliMNSQueue,
 	rr *ali_mns.MessageReceiveResponse, vr *ali_mns.MessageVisibilityChangeResponse, qf mqpf.QueueFramework) {
 
 	if ali_mns.ERR_MNS_MESSAGE_NOT_EXIST.IsEqual(err) || q == nil || rr == nil || vr == nil {
