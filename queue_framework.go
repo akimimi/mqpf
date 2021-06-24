@@ -96,7 +96,11 @@ func (qf *queueFramework) Launch() {
 			go func() {
 				select {
 				case resp := <-respChan:
-					for _, message := range resp.Messages {
+					if qf.config.Verbose {
+						logs.Debug("Batch Received", len(resp.Messages), "Messages")
+					}
+					for mid := range resp.Messages {
+						message := resp.Messages[mid]
 						wg.Add(1)
 						go qf.OnMessageReceived(&message, &wg)
 					}
@@ -205,6 +209,7 @@ func (qf *queueFramework) OnMessageReceived(resp *ali_mns.MessageReceiveResponse
 
 func (qf *queueFramework) changeVisibility(resp *ali_mns.MessageReceiveResponse,
 	onSuccess func(vret *ali_mns.MessageVisibilityChangeResponse)) {
+
 	qf.handler.BeforeChangeVisibility(qf.queue, resp)
 	if vret, e := qf.queue.ChangeMessageVisibility(resp.ReceiptHandle, int64(qf.config.VisibilityTimeout)); e == nil {
 		qf.handler.AfterChangeVisibility(qf.queue, resp, &vret)

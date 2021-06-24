@@ -101,6 +101,7 @@ func (d *DefaultEventHandler) OnConsumeFailed(_ error, _ []byte, _ *ali_mns.Mess
 
 func (d *DefaultEventHandler) BeforeChangeVisibility(_ ali_mns.AliMNSQueue, _ *ali_mns.MessageReceiveResponse) {
 }
+
 func (d *DefaultEventHandler) AfterChangeVisibility(_ ali_mns.AliMNSQueue,
 	_ *ali_mns.MessageReceiveResponse,
 	_ *ali_mns.MessageVisibilityChangeResponse) {

@@ -1,6 +1,8 @@
-# Mimit Queue Process Framework
-
+Mimit Queue Process Framework
 ================================================================
+
+[![Go Reference](https://pkg.go.dev/badge/github.com/akimimi/mqpf.svg)](https://pkg.go.dev/github.com/akimimi/mqpf)
+
 
 ## Description
 Mimit queue process framework provide a consumer frame work for task queue process.

@@ -202,12 +202,22 @@ func (tq *mockQueue) ReceiveMessage(respChan chan ali_mns.MessageReceiveResponse
 	respChan <- ali_mns.MessageReceiveResponse{}
 	tq.msgReceived++
 	if tq.msgReceived >= tq.MaxReceived {
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(1000 * time.Millisecond)
 		tq.Qf.Stop()
 	}
 }
 
-func (tq *mockQueue) BatchReceiveMessage(_ chan ali_mns.BatchMessageReceiveResponse, _ chan error, _ int32, _ ...int64) {
+func (tq *mockQueue) BatchReceiveMessage(respChan chan ali_mns.BatchMessageReceiveResponse, _ chan error, _ int32, _ ...int64) {
+	a := make([]ali_mns.MessageReceiveResponse, 1, 1)
+	a[0] = ali_mns.MessageReceiveResponse{}
+	respChan <- ali_mns.BatchMessageReceiveResponse{
+		Messages: a,
+	}
+	tq.msgReceived++
+	if tq.msgReceived >= tq.MaxReceived {
+		time.Sleep(1000 * time.Millisecond)
+		tq.Qf.Stop()
+	}
 }
 
 func (tq *mockQueue) PeekMessage(_ chan ali_mns.MessageReceiveResponse, _ chan error) {
