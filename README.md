@@ -2,7 +2,7 @@ Mimit Queue Process Framework
 ================================================================
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/akimimi/mqpf.svg)](https://pkg.go.dev/github.com/akimimi/mqpf)
-[![Build Status](https://travis-ci.com/akimimi/mqpf.svg?branch=main)](https://travis-ci.com/akimimi/mqpf)
+[![Build Status](https://travis-ci.com/akimimi/mqpf.svg?branch=master)](https://travis-ci.com/akimimi/mqpf)
 [![Coverage Status](https://coveralls.io/repos/github/akimimi/mqpf/badge.svg?branch=master)](https://coveralls.io/github/akimimi/mqpf?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/akimimi/mqpf)](https://goreportcard.com/report/github.com/akimimi/mqpf)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
