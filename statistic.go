@@ -128,15 +128,15 @@ func (ss *Statistic) Performance() string {
 func (ss *Statistic) MonitorLog() string {
 	if ss.periodMonitor == nil {
 		return ""
-	} else {
-		d := ss.periodMonitor.duration.Seconds()
-		return fmt.Sprintf("Monitor R: %.3f, S: %.3f, F: %.3f, E: %.3f, N: %s",
-			float64(ss.periodMonitor.msgReceived)/d,
-			float64(ss.periodMonitor.handleSuccess)/d,
-			float64(ss.periodMonitor.handleError)/d,
-			float64(ss.periodMonitor.queueError)/d,
-			ss.periodMonitor.logTime.Format("2006-01-02 15:04:05 +0800"))
 	}
+
+	d := ss.periodMonitor.duration.Seconds()
+	return fmt.Sprintf("Monitor R: %.3f, S: %.3f, F: %.3f, E: %.3f, N: %s",
+		float64(ss.periodMonitor.msgReceived)/d,
+		float64(ss.periodMonitor.handleSuccess)/d,
+		float64(ss.periodMonitor.handleError)/d,
+		float64(ss.periodMonitor.queueError)/d,
+		ss.periodMonitor.logTime.Format("2006-01-02 15:04:05 +0800"))
 }
 
 // Fetch returns statistic value by paramName request. The function is thread safe.

@@ -61,6 +61,8 @@ type QueueEventHandlerInterface interface {
 		qf QueueFramework)
 }
 
+// DefaultEventHandler implements QueueEventHandlerInterface for default apis.
+// Users can derive from this struct and override the apis.
 type DefaultEventHandler struct{}
 
 // BeforeLaunch registers system INT, TERM, STOP signals to stop the queue, and HUP signal to update the performance log.
@@ -90,9 +92,8 @@ func (d *DefaultEventHandler) OnWaitingMessage(qf QueueFramework) {
 func (d *DefaultEventHandler) ParseMessageBody(resp *ali_mns.MessageReceiveResponse) ([]byte, error) {
 	if resp != nil {
 		return base64.StdEncoding.DecodeString(resp.MessageBody)
-	} else {
-		return nil, nil
 	}
+	return nil, nil
 }
 
 // OnParseMessageBodyFailed does nothing by default.
